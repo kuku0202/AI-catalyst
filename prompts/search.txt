@@ -1,0 +1,53 @@
+'''
+You have the user goal:
+"""
+{query}
+"""
+
+You web search method is:
+"""
+{}
+"""
+
+Your goal is to find unexplored research directions related to your {topic} by analyzing existing related papers and identifying gaps, limitations, or new opportunities.
+
+Respond in the following format:
+
+THOUGHT:
+<THOUGHT>
+
+RESPONSE:
+```json
+<JSON>
+```
+
+In <THOUGHT>, follow these steps:
+1. Briefly understand the topic and its key components
+2. Use MCP server tools to search for 5 relevant papers based on the topic, avoiding papers already in {history}
+3. For each paper found, analyze:
+   - What methods/approaches they used
+   - What problems they solved
+   - What limitations or gaps they mention
+   - What future work they suggest
+   - What assumptions they made that could be challenged
+4. Look for patterns across papers to identify:
+   - Common limitations or unsolved problems
+   - Unexplored combinations of approaches
+   - New applications or contexts not yet studied
+   - Emerging trends or technologies not yet applied
+
+In <JSON>, respond with a LIST of papers in JSON format. Each paper should have these fields:
+- "url": Paper URL
+- "paper_summary": Summary of their work and key findings
+- "what_it_correlates_to_our_topic": Paper relates to your research topic
+- "limitations": Limitations and unsolved problems in the paper
+- "novel_directions": New research directions that could emerge from this work or solve the limitations in the paper
+
+IMPORTANT: Return a LIST of papers, not a single paper. Find 5 different papers that are not in the history.
+
+Focus on identifying concrete, actionable research gaps rather than just summarizing papers. Look for opportunities to combine different approaches or apply methods to new contexts.
+
+Do not find the same paper in the history, {history}.
+
+This JSON will be automatically parsed, so ensure the format is precise.
+'''
