@@ -7,6 +7,8 @@ from mcp.client.stdio import stdio_client
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
+import re
+import json
 
 load_dotenv()  # load environment variables from .env
 
@@ -18,43 +20,43 @@ class MCPClient:
         self.anthropic = Anthropic()
         
         # Schema information to help AI generate correct queries
-        self.schema_info = """
-        Available GraphQL fields for Catalysis Hub API:
+        # self.schema_info = """
+        # Available GraphQL fields for Catalysis Hub API:
         
-        Reaction fields:
-        - id: String
-        - Equation: String
-        - activationEnergy: Float
-        - reactionEnergy: Float
-        - chemicalComposition: String
-        - surfaceComposition: String
-        - facet: String
-        - publication: Publication (singular, not plural)
-        - reactionSystems: [ReactionSystem]
+        # Reaction fields:
+        # - id: String
+        # - Equation: String
+        # - activationEnergy: Float
+        # - reactionEnergy: Float
+        # - chemicalComposition: String
+        # - surfaceComposition: String
+        # - facet: String
+        # - publication: Publication (singular, not plural)
+        # - reactionSystems: [ReactionSystem]
         
-        ReactionSystem fields:
-        - name: String
-        - energyCorrection: Float
-        - reactions: Reaction
-        - systems: System
+        # ReactionSystem fields:
+        # - name: String
+        # - energyCorrection: Float
+        # - reactions: Reaction
+        # - systems: System
         
-        Publication fields:
-        - title: String
-        - authors: String
-        - year: Int
-        - doi: String
+        # Publication fields:
+        # - title: String
+        # - authors: String
+        # - year: Int
+        # - doi: String
         
-        Valid query arguments for reactions:
-        - first: Int (number of results)
-        - reactants: String (search for specific reactants)
+        # Valid query arguments for reactions:
+        # - first: Int (number of results)
+        # - reactants: String (search for specific reactants)
         
-        Example valid queries:
-        1. Basic reactions: {reactions(first: 10) {edges {node {id Equation}}}}
-        2. With energetics: {reactions(first: 5) {edges {node {id Equation activationEnergy reactionEnergy}}}}
-        3. With publications: {reactions(first: 5) {edges {node {id Equation publication {title year}}}}}
+        # Example valid queries:
+        # 1. Basic reactions: {reactions(first: 10) {edges {node {id Equation}}}}
+        # 2. With energetics: {reactions(first: 5) {edges {node {id Equation activationEnergy reactionEnergy}}}}
+        # 3. With publications: {reactions(first: 5) {edges {node {id Equation publication {title year}}}}}
         
-        Note: Do NOT use fields like 'temperature', 'pressure', 'publications' (plural), or arguments like 'equation' as they don't exist in the schema.
-        """
+        # Note: Do NOT use fields like 'temperature', 'pressure', 'publications' (plural), or arguments like 'equation' as they don't exist in the schema.
+        # """
 
     async def connect_to_server(self, server_script_path: str):
         """Connect to an MCP server
@@ -89,7 +91,8 @@ class MCPClient:
         messages = [
             {
                 "role": "user",
-                "content": f"{self.schema_info}\n\nUser query: {query}\n\nPlease generate valid GraphQL queries using only the fields listed above. Do not use fields like 'temperature', 'pressure', or 'publications' (plural) as they don't exist in the schema. IMPORTANT: After making a tool call, provide a clear, concise answer based on the results. Do not make multiple tool calls unless absolutely necessary."
+                # "content": f"{self.schema_info}\n\nUser query: {query}\n\nPlease generate valid GraphQL queries using only the fields listed above. Do not use fields like 'temperature', 'pressure', or 'publications' (plural) as they don't exist in the schema. IMPORTANT: After making a tool call, provide a clear, concise answer based on the results. Do not make multiple tool calls unless absolutely necessary."
+                "content": query
             }
         ]
 
@@ -186,3 +189,32 @@ class MCPClient:
 # if __name__ == "__main__":
 #     import sys
 #     asyncio.run(main())
+
+
+
+def extract_json_between_markers(llm_output):
+    # Regular expression pattern to find JSON content between ```json and ```
+    json_pattern = r"```json(.*?)```"
+    matches = re.findall(json_pattern, llm_output, re.DOTALL)
+
+    if not matches:
+        # Fallback: Try to find any JSON-like content in the output
+        json_pattern = r"\{.*?\}"
+        matches = re.findall(json_pattern, llm_output, re.DOTALL)
+
+    for json_string in matches:
+        json_string = json_string.strip()
+        try:
+            parsed_json = json.loads(json_string)
+            return parsed_json
+        except json.JSONDecodeError:
+            # Attempt to fix common JSON issues
+            try:
+                # Remove invalid control characters
+                json_string_clean = re.sub(r"[\x00-\x1F\x7F]", "", json_string)
+                parsed_json = json.loads(json_string_clean)
+                return parsed_json
+            except json.JSONDecodeError:
+                continue  # Try next match
+
+    return None  # No valid JSON found
